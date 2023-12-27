@@ -33,6 +33,57 @@ django-admin startproject django_project
    - The default SQLite database file created by Django when you run migrations. It stores the project's data, including tables for models defined in the project's apps. This file is part of the default configuration and can be replaced with other database backends as needed.
 
 ## Part 2 - Applications and Routes
+```bash
+# create a django app
+python3 manage.py startapp blog
+```
+### The `startapp` command cretes the following django file structure:
+   - new file:   blog/__init__.py
+   - new file:   blog/admin.py
+   - new file:   blog/apps.py
+   - new file:   blog/migrations/__init__.py
+   - new file:   blog/models.py
+   - new file:   blog/tests.py
+
+1. Create views for `home page` and `about page`
+```python
+# blog/views.py
+from django.shortcuts import render
+from django.http import HttpResponse
+
+
+def home(request):
+    return HttpResponse('<h1>Blog Home</h1>')
+
+
+def about(request):
+    return HttpResponse('<h1>Blog About</h1>')
+```
+
+2. Create **app-level routes** for `home page`, `blog page` and `about page`
+```python
+# blog/urls.py
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path('', views.home, name='blog-home'),
+    path('blog/', views.home, name='blog-home'),
+    path('about/', views.about, name='blog-about'),
+]
+```
+
+3. Create **project-level routes** for `home page`, `blog page` and `about page`
+```python
+# django_project/urls.py
+from django.contrib import admin
+from django.urls import path, include
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('', include('blog.urls')),
+]
+```
 
 ## Part 3 - Templates
 
