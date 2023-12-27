@@ -136,7 +136,16 @@ def about(request):
 ```
 
 ## Part 4 - Admin Page
-
+```bash
+# create a superuser account
+py manage.py makemigrations
+py manage.py migrate
+py manage.py createsuperuser
+```
+### Now you can login, using the superuser credentials via:
+```bash
+http://127.0.0.1:8000/admin/
+```
 ## Part 5 - Database and Migrations
 
 ## Part 6 - User Registration
