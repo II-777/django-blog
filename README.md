@@ -37,15 +37,27 @@ django-admin startproject django_project
 # create a django app
 python3 manage.py startapp blog
 ```
-### The `startapp` command cretes the following django file structure:
-   - new file:   blog/__init__.py
+### The `startapp` command cretes the following django file structure: - new file:   blog/__init__.py
    - new file:   blog/admin.py
    - new file:   blog/apps.py
    - new file:   blog/migrations/__init__.py
    - new file:   blog/models.py
    - new file:   blog/tests.py
 
-1. Create views for `home page` and `about page`
+1. Modify `django_project/settings.py` to register the new app
+```python
+INSTALLED_APPS = [
+    'blog',
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+]
+```
+
+2. Create views for `home page` and `about page`
 ```python
 # blog/views.py
 from django.shortcuts import render
@@ -60,7 +72,7 @@ def about(request):
     return HttpResponse('<h1>Blog About</h1>')
 ```
 
-2. Create **app-level routes** for `home page`, `blog page` and `about page`
+3. Create **app-level routes** for `home page`, `blog page` and `about page`
 ```python
 # blog/urls.py
 from django.urls import path
@@ -73,7 +85,7 @@ urlpatterns = [
 ]
 ```
 
-3. Create **project-level routes** for `home page`, `blog page` and `about page`
+4. Create **project-level routes** for `home page`, `blog page` and `about page`
 ```python
 # django_project/urls.py
 from django.contrib import admin
@@ -86,6 +98,42 @@ urlpatterns = [
 ```
 
 ## Part 3 - Templates
+
+### Add templates and static files: 
+   - new file:   blog/static/blog/main.css
+   - new file:   blog/templates/blog/about.html
+   - new file:   blog/templates/blog/base.html
+   - new file:   blog/templates/blog/home.html
+
+1. Modify `blog/views.py` to display html templates
+```python
+# blog/views.py
+from django.shortcuts import render
+
+posts = [
+    {
+        "author": "John Doe",
+        "title": "Blog Post 1",
+        "content": "First post content",
+        "date_posted": "December 14, 2023",
+    },
+    {
+        "author": "Jane Doe",
+        "title": "Blog Post 2",
+        "content": "Second post content",
+        "date_posted": "December 15, 2023",
+    },
+]
+
+
+def home(request):
+    context = {"posts": posts}
+    return render(request, "blog/home.html", context)
+
+
+def about(request):
+    return render(request, "blog/about.html", {"title": "About"})
+```
 
 ## Part 4 - Admin Page
 
