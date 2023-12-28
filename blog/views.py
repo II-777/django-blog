@@ -1,25 +1,18 @@
-from django.shortcuts import render
+from django.shortcuts import render # used to render templates. 
+from .models import Post # allows the views to interact with the database through the model
 
-posts = [
-    {
-        "author": "John Doe",
-        "title": "Blog Post 1",
-        "content": "First post content",
-        "date_posted": "December 14, 2023",
-    },
-    {
-        "author": "Jane Doe",
-        "title": "Blog Post 2",
-        "content": "Second post content",
-        "date_posted": "December 15, 2023",
-    },
-]
-
-
+# Define a view function for the home page
 def home(request):
-    context = {"posts": posts}
-    return render(request, "blog/home.html", context)
+    # Retrieve all Post objects from the database
+    # and store them in the 'posts' variable in the context dictionary
+    context = {
+        'posts': Post.objects.all()
+    }
+    
+    # Render the home.html template with the provided context
+    return render(request, 'blog/home.html', context)
 
-
+# Define a view function for the about page
 def about(request):
-    return render(request, "blog/about.html", {"title": "About"})
+    # Render the about.html template with a context containing the 'title' variable
+    return render(request, 'blog/about.html', {'title': 'About'})
