@@ -1,0 +1,33 @@
+{% extends "blog/base.html" %}
+{% load crispy_forms_tags %}
+{% block content %}
+<!-- Extends the base.html template for consistent styling -->
+<div class="content-section">
+    <!-- Main content section -->
+    <form method="POST">
+        <!-- Form for user registration using the POST method -->
+        {% csrf_token %}
+        <!-- Include a CSRF token for security -->
+        <fieldset class="form-group">
+            <!-- Fieldset to group form elements with a legend -->
+            <legend class="border-bottom mb-4">Join Today</legend>
+            <!-- Legend for the form section -->
+            {{ form|crispy }}
+            <!-- Render the form using the crispy_forms_tags to apply styling -->
+        </fieldset>
+        <div class="form-group">
+            <!-- Additional form group for the submit button -->
+            <button class="btn btn-outline-info" type="submit">Sign Up</button>
+            <!-- Submit button for the form -->
+        </div>
+    </form>
+    <div class="border-top pt-3">
+        <!-- Additional content section with border and padding at the top -->
+        <small class="text-muted">
+            <!-- Small text with muted color -->
+            Already Have An Account? <a class="ml-2" href="#">Sign In</a>
+            <!-- Display a link for users who already have an account -->
+        </small>
+    </div>
+</div>
+{% endblock content %}
