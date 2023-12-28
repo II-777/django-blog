@@ -121,4 +121,9 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/2.1/howto/static-files/
 
 STATIC_URL = '/static/'
+# Specifies the template pack for django-crispy-forms.
 CRISPY_TEMPLATE_PACK = 'bootstrap4'
+# Redirects unauthenticated users to the login page.
+LOGIN_URL = 'login'
+# Redirects users after a successful login.
+LOGIN_REDIRECT_URL = 'blog-home'

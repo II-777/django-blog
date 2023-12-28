@@ -510,6 +510,176 @@ class UserRegisterForm(UserCreationForm):
 ```
 
 ## Part 7 - Login and Logout System
+1. modified:   django_project/urls.py
+2. modified:   blog/templates/blog/base.html
+3. modified:   django_project/settings.py
+4. new file:   users/templates/users/login.html
+5. new file:   users/templates/users/logout.html
+6. new file:   users/templates/users/profile.html
+7. modified:   users/templates/users/register.html
+8. modified:   users/views.py
+  
+1. Edit project-level `django_project/urls.py` to add routes to `login`, `logout` and `profile` pages
+```python
+# django_project/urls.py
+# Import the admin module for Django's administration site
+from django.contrib import admin
+# Import functions for defining URL patterns
+from django.urls import path, include
+# Import the 'register' view from the 'users' app's views module and alias it as 'user_views'
+from users import views as user_views
+# Import views from Django's authentication module for handling authentication-related views
+from django.contrib.auth import views as auth_views
+
+# Define URL patterns for the Django project
+urlpatterns = [
+    # Admin site URL
+    path('admin/', admin.site.urls),
+    # Include URL patterns from the 'blog' app
+    path('', include('blog.urls')),
+    # User registration URL, mapped to the 'register' view
+    path('register/', user_views.register, name='register'),
+    # Profile view for the 'profile/' URL
+    path('profile/', user_views.profile, name='profile'),
+    # Login view using Django's built-in LoginView with a custom template
+    path('login/', auth_views.LoginView.as_view(template_name='users/login.html'), name='login'),
+    # Logout view using Django's built-in LogoutView with a custom template
+    path('logout/', auth_views.LogoutView.as_view(template_name='users/logout.html'), name='logout'),
+    # Include additional URL patterns from the 'blog.urls' module
+    path('', include('blog.urls')),
+]
+```
+
+2. Edit `blog/templates/blog/base.html` to add right side navigation url blocks
+```html
+          <!-- Navbar Right Side with Login and Register links -->
+          <div class="navbar-nav">
+            {% if user.is_authenticated %}
+            <a class="nav-item nav-link" href="{% url 'profile' %}">Profile</a>
+            <a class="nav-item nav-link" href="{% url 'logout' %}">Logout</a>
+            {% else %}
+            <a class="nav-item nav-link" href="{% url 'login' %}">Login</a>
+            <a class="nav-item nav-link" href="{% url 'register' %}">Register</a>
+            {% endif %}
+          </div>
+```
+
+3. Edit `django_project/settings.py`
+```python
+# django_project/settings.py
+# Specifies the template pack for django-crispy-forms.
+CRISPY_TEMPLATE_PACK = 'bootstrap4'
+# Redirects unauthenticated users to the login page.
+LOGIN_URL = 'login'
+# Redirects users after a successful login.
+LOGIN_REDIRECT_URL = 'blog-home'
+```
+
+4. Add `users/templates/users/login.html`
+```html
+<!-- users/templates/users/login.html -->
+{% extends "blog/base.html" %}
+{% load crispy_forms_tags %}
+{% block content %}
+    <div class="content-section">
+        <form method="POST">
+            {% csrf_token %}
+            <fieldset class="form-group">
+                <legend class="border-bottom mb-4">Log In</legend>
+                {{ form|crispy }}
+            </fieldset>
+            <div class="form-group">
+                <button class="btn btn-outline-info" type="submit">Login</button>
+            </div>
+        </form>
+        <div class="border-top pt-3">
+            <small class="text-muted">
+                Don't have an Account? <a class="ml-2" href="{% url 'register' %}">Sign Up Now</a>
+            </small>
+        </div>
+    </div>
+{% endblock content %}
+```
+
+5. Add `users/templates/users/logout.html`
+```html
+<!-- users/templates/users/logout.html -->
+{% extends "blog/base.html" %}
+{% block content %}
+<h2>You have logged out</h2>
+<div class="border-top pt-3">
+    <small class="text-muted">
+        <a href="{% url 'login' %}">Log in again</a>
+    </small>
+</div>
+{% endblock content %}
+```
+
+6. Add `users/templates/users/profile.html`
+```html
+<!-- users/templates/users/profile.html -->
+{% extends "blog/base.html" %}
+{% block content %}
+    <h1>{{ user.username }}</h1>
+{% endblock content %}
+```
+
+7. Edit `users/templates/users/register.html` to add login url block
+```html
+<!-- users/templates/users/register.html -->
+Already Have An Account? <a class="ml-2" href="{% url 'login' %}">Sign In</a>
+```
+
+8. Edit `users/views.py` to add login restricted `profile` page
+```python
+# users/views.py 
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from .forms import UserRegisterForm
+from django.contrib.auth.decorators import login_required
+
+
+# Create your views here.
+# Define a view function for user registration
+def register(request):
+    # Check if the request method is POST
+    if request.method == "POST":
+        # Create an instance of the UserRegisterForm with the POST data
+        form = UserRegisterForm(request.POST)
+
+        # Check if the form is valid
+        if form.is_valid():
+            # Save the form data to create a new user
+            form.save()
+
+            # Get the username from the cleaned data of the form
+            username = form.cleaned_data.get("username")
+
+            # Display a success message using Django messages framework
+            messages.success(request, f"Account created for {username}!")
+
+            # Redirect the user to the home page
+            return redirect("blog-home")
+    else:
+        # If the request method is not POST, create an empty UserRegisterForm instance
+        form = UserRegisterForm()
+
+    # Render the register.html template with the form in the context
+    return render(request, "users/register.html", {"form": form})
+
+# Decorator to require login for the profile view
+@login_required
+def profile(request):
+    return render(request, "users/profile.html")
+
+# The following comments explain the message levels available in the messages framework
+# message.debug: Low-level debug information
+# message.info: General information or status update
+# message.success: Indicate a successful or positive action
+# message.warning: Indicate a warning or potential problem
+# message.error: Indicate an error or critical issue
+```
+
 
 ## Part 8 - User Profile and Picture
 

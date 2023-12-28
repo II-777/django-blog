@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect
-# Import the UserRegisterForm from the current application's forms
-from .forms import UserRegisterForm
 from django.contrib import messages
+from .forms import UserRegisterForm
+from django.contrib.auth.decorators import login_required
 
 
 # Create your views here.
@@ -32,6 +32,10 @@ def register(request):
     # Render the register.html template with the form in the context
     return render(request, "users/register.html", {"form": form})
 
+
+@login_required
+def profile(request):
+    return render(request, "users/profile.html")
 
 # The following comments explain the message levels available in the messages framework
 # message.debug: Low-level debug information
