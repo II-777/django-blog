@@ -843,6 +843,223 @@ if settings.DEBUG:
 10. Add the default avatar file `media/default.jpg`
 
 ## Part 9 - Update User Profile
+# Changes made:
+- modified:   blog/templates/blog/home.html
+- modified:   users/forms.py
+- modified:   users/models.py
+- modified:   users/templates/users/profile.html
+- modified:   users/views.py
+
+1. Edit `users/forms.py`
+```python
+# users/forms.py
+# Import necessary modules and classes from Django
+from django import forms
+from django.contrib.auth.models import User
+from django.contrib.auth.forms import UserCreationForm
+
+# Import Profile model from the current app
+from .models import Profile
+
+# Form for user registration, extending Django's built-in UserCreationForm
+class UserRegisterForm(UserCreationForm):
+    # Additional email field for registration form
+    email = forms.EmailField()
+
+    class Meta:
+        # Specify the model and fields for the form
+        model = User
+        fields = ['username', 'email', 'password1', 'password2']
+
+# Form for updating user information, extending Django's ModelForm
+class UserUpdateForm(forms.ModelForm):
+    # Additional email field for user update form
+    email = forms.EmailField()
+
+    class Meta:
+        # Specify the model and fields for the form
+        model = User
+        fields = ['username', 'email']
+
+# Form for updating user profile information, extending Django's ModelForm
+class ProfileUpdateForm(forms.ModelForm):
+    class Meta:
+        # Specify the model and fields for the form
+        model = Profile
+        fields = ['image']
+```
+
+2. Edit `users/models.py`
+```python
+# users/models.py
+# Import necessary modules and classes from Django
+from django.db import models
+from django.contrib.auth.models import User
+from PIL import Image
+
+# Model for user profiles, extending Django's Model class
+class Profile(models.Model):
+    # One-to-One relationship with the built-in User model, deleting profile when user is deleted
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+
+    # ImageField for user profile pictures, with default and upload path
+    image = models.ImageField(default='default.jpg', upload_to='profile_pics')
+
+    def __str__(self):
+        # String representation of the profile, displaying the associated username
+        return f'{self.user.username} Profile'
+
+    def save(self):
+        # Call the save method of the parent class (Model) before additional operations
+        super().save()
+
+        # Open the image associated with the profile
+        img = Image.open(self.image.path)
+
+        # Resize the image if it exceeds a certain size
+        if img.height > 300 or img.width > 300:
+            output_size = (300, 300)
+            img.thumbnail(output_size)
+            img.save(self.image.path)
+```
+
+3. Edit `users/views.py`
+```python
+# users/views.py
+# Import necessary modules and classes from Django
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+
+# Import user-related forms from the current app
+from .forms import UserRegisterForm, UserUpdateForm, ProfileUpdateForm
+
+# View function for user registration
+def register(request):
+    # Handle form submission
+    if request.method == 'POST':
+        # Create a registration form with the submitted data
+        form = UserRegisterForm(request.POST)
+        # Check if the form is valid
+        if form.is_valid():
+            # Save the form data and create a new user
+            form.save()
+            username = form.cleaned_data.get('username')
+            # Display a success message and redirect to the login page
+            messages.success(request, f'Your account has been created! You are now able to log in')
+            return redirect('login')
+    else:
+        # If it's a GET request, create an empty registration form
+        form = UserRegisterForm()
+
+    # Render the registration page with the form
+    return render(request, 'users/register.html', {'form': form})
+
+# View function for user profile
+@login_required
+def profile(request):
+    # Handle form submission
+    if request.method == 'POST':
+        # Create user update form and profile update form with the submitted data
+        u_form = UserUpdateForm(request.POST, instance=request.user)
+        p_form = ProfileUpdateForm(request.POST, request.FILES, instance=request.user.profile)
+        # Check if both forms are valid
+        if u_form.is_valid() and p_form.is_valid():
+            # Save the updated user and profile information
+            u_form.save()
+            p_form.save()
+            # Display a success message and redirect to the profile page
+            messages.success(request, f'Your account has been updated!')
+            return redirect('profile')
+
+    else:
+        # If it's a GET request, create user update form and profile update form with the current user data
+        u_form = UserUpdateForm(instance=request.user)
+        p_form = ProfileUpdateForm(instance=request.user.profile)
+
+    # Create a context with user update form and profile update form
+    context = {
+        'u_form': u_form,
+        'p_form': p_form
+    }
+
+    # Render the profile page with the user update form and profile update form
+    return render(request, 'users/profile.html', context)
+```
+
+4. Edit `users/templates/users/profile.html`
+```html
+<!-- users/templates/users/profile.html -->
+{% extends "blog/base.html" %}
+
+{% load crispy_forms_tags %}
+
+{% block content %}
+    <!-- Start of content-section -->
+    <div class="content-section">
+        <!-- User profile display section -->
+        <div class="media">
+            <!-- Display user profile image -->
+            <img class="rounded-circle account-img" src="{{ user.profile.image.url }}">
+            <div class="media-body">
+                <!-- Display username as a heading -->
+                <h2 class="account-heading">{{ user.username }}</h2>
+                <!-- Display user email as secondary text -->
+                <p class="text-secondary">{{ user.email }}</p>
+            </div>
+        </div>
+
+        <!-- Form for updating user profile information -->
+        <form method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+            <!-- Fieldset for organizing form fields with a legend -->
+            <fieldset class="form-group">
+                <legend class="border-bottom mb-4">Profile Info</legend>
+                <!-- Render user update form and profile update form using crispy forms -->
+                {{ u_form|crispy }}
+                {{ p_form|crispy }}
+            </fieldset>
+
+            <!-- Form submission button -->
+            <div class="form-group">
+                <button class="btn btn-outline-info" type="submit">Update</button>
+            </div>
+        </form>
+    </div>
+    <!-- End of content-section -->
+{% endblock content %}
+```
+
+5. Edit `blog/templates/blog/home.html`
+```html
+<!-- blog/templates/blog/home.html -->
+{% extends "blog/base.html" %}
+
+{% block content %}
+    <!-- Iterate over each post in the 'posts' queryset -->
+    {% for post in posts %}
+        <!-- Start of article container with media class for styling -->
+        <article class="media content-section">
+            <!-- Display the profile image of the post author -->
+            <img class="rounded-circle article-img" src="{{ post.author.profile.image.url }}">
+            <div class="media-body">
+                <!-- Display post metadata (author and date) in a separate div -->
+                <div class="article-metadata">
+                    <!-- Display a link to the author's profile page -->
+                    <a class="mr-2" href="#">{{ post.author }}</a>
+                    <!-- Display the date when the post was created -->
+                    <small class="text-muted">{{ post.date_posted|date:"Y-m-d H:i" }}</small>
+                </div>
+                <!-- Display post title as a heading -->
+                <h2><a class="article-title" href="#">{{ post.title }}</a></h2>
+                <!-- Display post content -->
+                <p class="article-content">{{ post.content }}</p>
+            </div>
+        </article>
+        <!-- End of article container -->
+    {% endfor %}
+{% endblock content %}
+```
 
 ## Part 10 - Create, Update, and Delete Posts
 
