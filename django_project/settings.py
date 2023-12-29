@@ -123,7 +123,16 @@ USE_TZ = True
 STATIC_URL = '/static/'
 # Specifies the template pack for django-crispy-forms.
 CRISPY_TEMPLATE_PACK = 'bootstrap4'
+
 # Redirects unauthenticated users to the login page.
 LOGIN_URL = 'login'
 # Redirects users after a successful login.
 LOGIN_REDIRECT_URL = 'blog-home'
+
+# Define the absolute filesystem path to the directory that will hold user-uploaded media
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+# Define the base URL that will be used to serve media files uploaded by users.
+MEDIA_URL = '/media/'
+
+# Set the default auto-generated field for primary keys to BigAutoField
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

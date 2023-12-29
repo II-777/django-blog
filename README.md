@@ -510,6 +510,7 @@ class UserRegisterForm(UserCreationForm):
 ```
 
 ## Part 7 - Login and Logout System
+# Changes Made:
 1. modified:   django_project/urls.py
 2. modified:   blog/templates/blog/base.html
 3. modified:   django_project/settings.py
@@ -682,6 +683,164 @@ def profile(request):
 
 
 ## Part 8 - User Profile and Picture
+### Changes made:
+1. Edit `users/models.py`
+```python
+# users/models.py
+from django.db import models
+from django.contrib.auth.models import User
+
+
+# Create your models here.
+# Define a Django model called 'Profile' that inherits from the 'Model' class
+class Profile(models.Model):
+    # Create a one-to-one relationship with the built-in User model in Django
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+
+    # Define an image field for the profile picture, with a default image and upload directory
+    image = models.ImageField(default='default.jpg', upload_to='profile_pics')
+
+    # Define a string representation for the Profile model, returning the username and 'Profile'
+    def __str__(self):
+        return f'{self.user.username} Profile'
+```
+
+2. Run 
+```bash
+# Install Pillow module
+pip install Pillow
+# Create database migration files based on changes in the models
+py manage.py makemigrations
+# Apply pending database migrations to update the database schema
+py manage.py migrate
+```
+
+3. Edit `users/admin.py` to register the `Profile` model
+```python
+# users/admin.py
+from django.contrib import admin
+from .models import Profile
+
+# Register your models here.
+admin.site.register(Profile)
+```
+
+4. Add profiles for ii777 (with avatar) and user1 (no avatar) via admin interface
+5. Activate Django shell
+```bash
+py manage.py shell
+```
+6. Run  
+```python
+from django.contrib.auth.models import User
+user = User.objects.filter(username='ii777').first()
+user
+# Output: <User: ii777>
+user.profile
+# Output: <Profile: ii777 Profile>
+user.profile.image
+# Output: <ImageFieldFile: profile_pics/avatar.jpeg>
+user.profile.image.width
+# Output: 460
+user.profile.image.height
+# Output: 460
+user.profile.image.url
+# Output: 'profile_pics/avatar.jpeg'
+user = User.objects.filter(username='user1').first()
+user
+# Output: <User: user1>
+user.profile.image
+# Output: <ImageFieldFile: default.jpg>
+user.profile.image.url
+# Output: 'default.jpg'
+``` 
+
+7. Edit `django_project/settings.py` to add the following:
+```python
+# django_project/settings.py
+# Define the absolute filesystem path to the directory that will hold user-uploaded media
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+# Define the base URL that will be used to serve media files uploaded by users.
+MEDIA_URL = '/media/'
+
+# Set the default auto-generated field for primary keys to BigAutoField
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+```
+
+### Note:
+```python
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+```
+
+This setting ensures that Django will use the `BigAutoField` as the default auto-generated field for primary keys in models. The `BigAutoField` is a 64-bit integer-based primary key, and by setting `DEFAULT_AUTO_FIELD` in this way, you're instructing Django to use this type of field unless a different primary key field is explicitly specified for a particular model.
+
+
+8. Edit `users/apps.py`
+```python
+# users/apps.py
+from django.apps import AppConfig
+
+
+class UsersConfig(AppConfig):
+    default_auto_field = "django.db.models.BigAutoField"
+    name = "users"
+
+    def ready(self):
+        import users.signals
+```
+
+9. Edit `users/urls.py` to add the following:
+```python
+# users/urls.py
+# Import necessary modules from Django
+from django.contrib import admin
+from django.contrib.auth import views as auth_views
+from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
+from users import views as user_views  # Import views from the 'users' app
+
+# Define the URL patterns for the application
+urlpatterns = [
+    # Admin site URL
+    path('admin/', admin.site.urls),
+    # User registration URL
+    path('register/', user_views.register, name='register'),
+    # User profile URL
+    path('profile/', user_views.profile, name='profile'),
+    # Login URL
+    path('login/', auth_views.LoginView.as_view(template_name='users/login.html'), name='login'),
+    # Logout URL
+    path('logout/', auth_views.LogoutView.as_view(template_name='users/logout.html'), name='logout'),
+    # Include URLs from the 'blog' app
+    path('', include('blog.urls')),
+]
+
+# If the application is in DEBUG mode, add URL patterns for serving media files
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+```
+
+9. Add the `users/templates/users/profile.html` template
+```python
+# users/templates/users/profile.html
+{% extends "blog/base.html" %}
+{% load crispy_forms_tags %}
+{% block content %}
+    <div class="content-section">
+      <div class="media">
+        <img class="rounded-circle account-img" src="{{ user.profile.image.url }}">
+        <div class="media-body">
+          <h2 class="account-heading">{{ user.username }}</h2>
+          <p class="text-secondary">{{ user.email }}</p>
+        </div>
+      </div>
+      <!-- FORM HERE -->
+    </div>
+{% endblock content %}
+```
+
+10. Add the default avatar file `media/default.jpg`
 
 ## Part 9 - Update User Profile
 
