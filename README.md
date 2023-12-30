@@ -1343,5 +1343,214 @@ def about(request):
 ```
 
 ## Part 11 - Pagination
+### Changes made:
+- new file:   posts.json
+- new file:   delete_posts.py
+- new file:   populate_posts.py
+
+- modified:   blog/urls.py
+- modified:   blog/views.py
+- modified:   blog/templates/blog/home.html
+- new file:   blog/templates/blog/user_posts.html
+
+1. Populate dummy posts to have enough quantity to test pagination on them
+```bash
+py manage.py shell
+``` 
+```python
+from populate_posts import populate_posts
+populate_posts()
+```
+2. Edit `blog/urls.py`
+```python
+# blog/urls.py
+from django.urls import path
+from .views import (
+    PostListView,
+    PostDetailView,
+    PostCreateView,
+    PostUpdateView,
+    PostDeleteView,
+    UserPostListView
+)
+from . import views
+
+urlpatterns = [
+    path('', PostListView.as_view(), name='blog-home'),
+    path('user/<str:username>', UserPostListView.as_view(), name='user-posts'),
+    path('post/<int:pk>/', PostDetailView.as_view(), name='post-detail'),
+    path('post/new/', PostCreateView.as_view(), name='post-create'),
+    path('post/<int:pk>/update/', PostUpdateView.as_view(), name='post-update'),
+    path('post/<int:pk>/delete/', PostDeleteView.as_view(), name='post-delete'),
+    path('about/', views.about, name='blog-about'),
+]
+```
+3. Edit `blog/views.py`
+```python
+# blog/views.py
+from django.shortcuts import render, get_object_or_404
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.contrib.auth.models import User
+from django.views.generic import (
+    ListView,
+    DetailView,
+    CreateView,
+    UpdateView,
+    DeleteView
+)
+from .models import Post
+
+
+def home(request):
+    context = {
+        'posts': Post.objects.all()
+    }
+    return render(request, 'blog/home.html', context)
+
+
+class PostListView(ListView):
+    model = Post
+    template_name = 'blog/home.html'  # <app>/<model>_<viewtype>.html
+    context_object_name = 'posts'
+    ordering = ['-date_posted']
+    paginate_by = 10
+
+
+class UserPostListView(ListView):
+    model = Post
+    template_name = 'blog/user_posts.html'  # <app>/<model>_<viewtype>.html
+    context_object_name = 'posts'
+    paginate_by = 10
+
+    def get_queryset(self):
+        user = get_object_or_404(User, username=self.kwargs.get('username'))
+        return Post.objects.filter(author=user).order_by('-date_posted')
+
+
+class PostDetailView(DetailView):
+    model = Post
+
+
+class PostCreateView(LoginRequiredMixin, CreateView):
+    model = Post
+    fields = ['title', 'content']
+
+    def form_valid(self, form):
+        form.instance.author = self.request.user
+        return super().form_valid(form)
+
+
+class PostUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
+    model = Post
+    fields = ['title', 'content']
+
+    def form_valid(self, form):
+        form.instance.author = self.request.user
+        return super().form_valid(form)
+
+    def test_func(self):
+        post = self.get_object()
+        if self.request.user == post.author:
+            return True
+        return False
+
+
+class PostDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
+    model = Post
+    success_url = '/'
+
+    def test_func(self):
+        post = self.get_object()
+        if self.request.user == post.author:
+            return True
+        return False
+
+
+def about(request):
+    return render(request, 'blog/about.html', {'title': 'About'})
+```
+4. Edit `blog/templates/blog/home.html`
+```html
+<!-- blog/templates/blog/home.html -->
+{% extends "blog/base.html" %}
+{% block content %}
+    {% for post in posts %}
+        <article class="media content-section">
+          <img class="rounded-circle article-img" src="{{ post.author.profile.image.url }}">
+          <div class="media-body">
+            <div class="article-metadata">
+              <a class="mr-2" href="{% url 'user-posts' post.author.username %}">{{ post.author }}</a>
+              <small class="text-muted">{{ post.date_posted|date:"Y-m-d H:i" }}</small> 
+            </div>
+            <h2><a class="article-title" href="{% url 'post-detail' post.id %}">{{ post.title }}</a></h2>
+            <p class="article-content">{{ post.content }}</p>
+          </div>
+        </article>
+    {% endfor %}
+    {% if is_paginated %}
+
+      {% if page_obj.has_previous %}
+        <a class="btn btn-outline-info mb-4" href="?page=1">First</a>
+        <a class="btn btn-outline-info mb-4" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+      {% endif %}
+
+      {% for num in page_obj.paginator.page_range %}
+        {% if page_obj.number == num %}
+          <a class="btn btn-info mb-4" href="?page={{ num }}">{{ num }}</a>
+        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+          <a class="btn btn-outline-info mb-4" href="?page={{ num }}">{{ num }}</a>
+        {% endif %}
+      {% endfor %}
+
+      {% if page_obj.has_next %}
+        <a class="btn btn-outline-info mb-4" href="?page={{ page_obj.next_page_number }}">Next</a>
+        <a class="btn btn-outline-info mb-4" href="?page={{ page_obj.paginator.num_pages }}">Last</a>
+      {% endif %}
+
+    {% endif %}
+{% endblock content %}
+```
+5. Add `blog/templates/blog/user_posts.html`
+```html
+<!-- blog/templates/blog/user_posts.html -->
+{% extends "blog/base.html" %}
+{% block content %}
+    <h1 class="mb-3">Posts by {{ view.kwargs.username }} ({{ page_obj.paginator.count }})</h1>
+    {% for post in posts %}
+        <article class="media content-section">
+          <img class="rounded-circle article-img" src="{{ post.author.profile.image.url }}">
+          <div class="media-body">
+            <div class="article-metadata">
+              <a class="mr-2" href="{% url 'user-posts' post.author.username %}">{{ post.author }}</a>
+              <small class="text-muted">{{ post.date_posted|date:"F d, Y" }}</small>
+            </div>
+            <h2><a class="article-title" href="{% url 'post-detail' post.id %}">{{ post.title }}</a></h2>
+            <p class="article-content">{{ post.content }}</p>
+          </div>
+        </article>
+    {% endfor %}
+    {% if is_paginated %}
+
+      {% if page_obj.has_previous %}
+        <a class="btn btn-outline-info mb-4" href="?page=1">First</a>
+        <a class="btn btn-outline-info mb-4" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+      {% endif %}
+
+      {% for num in page_obj.paginator.page_range %}
+        {% if page_obj.number == num %}
+          <a class="btn btn-info mb-4" href="?page={{ num }}">{{ num }}</a>
+        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+          <a class="btn btn-outline-info mb-4" href="?page={{ num }}">{{ num }}</a>
+        {% endif %}
+      {% endfor %}
+
+      {% if page_obj.has_next %}
+        <a class="btn btn-outline-info mb-4" href="?page={{ page_obj.next_page_number }}">Next</a>
+        <a class="btn btn-outline-info mb-4" href="?page={{ page_obj.paginator.num_pages }}">Last</a>
+      {% endif %}
+
+    {% endif %}
+{% endblock content %}
+```
 
 ## Part 12 - Email and Password Reset
