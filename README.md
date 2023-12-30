@@ -1554,3 +1554,131 @@ def about(request):
 ```
 
 ## Part 12 - Email and Password Reset
+
+### Changes made: 
+- modified:   django_project/urls.py
+- modified:   django_project/settings.py
+- new file:   users/templates/users/password_reset.html
+- new file:   users/templates/users/password_reset_complete.html
+- new file:   users/templates/users/password_reset_confirm.html
+- new file:   users/templates/users/password_reset_done.html
+
+1. Edit `django_project/urls.py`
+```python
+# django_project/urls.py
+from django.contrib import admin
+from django.contrib.auth import views as auth_views
+from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
+from users import views as user_views
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('register/', user_views.register, name='register'),
+    path('profile/', user_views.profile, name='profile'),
+    path('login/', auth_views.LoginView.as_view(template_name='users/login.html'), name='login'),
+    path('logout/', auth_views.LogoutView.as_view(template_name='users/logout.html'), name='logout'),
+    path('password-reset/',
+         auth_views.PasswordResetView.as_view(
+             template_name='users/password_reset.html'
+         ),
+         name='password_reset'),
+    path('password-reset/done/',
+         auth_views.PasswordResetDoneView.as_view(
+             template_name='users/password_reset_done.html'
+         ),
+         name='password_reset_done'),
+    path('password-reset-confirm/<uidb64>/<token>/',
+         auth_views.PasswordResetConfirmView.as_view(
+             template_name='users/password_reset_confirm.html'
+         ),
+         name='password_reset_confirm'),
+    path('password-reset-complete/',
+         auth_views.PasswordResetCompleteView.as_view(
+             template_name='users/password_reset_complete.html'
+         ),
+         name='password_reset_complete'),
+    path('', include('blog.urls')),
+]
+
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+```
+
+2. Edit `django_project/settings.py`
+```python
+# django_project/settings.py
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = os.environ.get('EMAIL_USER')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_PASS')
+```
+
+3. Add `users/templates/users/password_reset.html`
+```html
+<!-- users/templates/users/password_reset.html -->
+{% extends "blog/base.html" %}
+{% load crispy_forms_tags %}
+{% block content %}
+    <div class="content-section">
+        <form method="POST">
+            {% csrf_token %}
+            <fieldset class="form-group">
+                <legend class="border-bottom mb-4">Reset Password</legend>
+                {{ form|crispy }}
+            </fieldset>
+            <div class="form-group">
+                <button class="btn btn-outline-info" type="submit">Request Password Reset</button>
+            </div>
+        </form>
+    </div>
+{% endblock content %}
+```
+
+4. Add `users/templates/users/password_reset_complete.html`
+```html
+<!-- users/templates/users/password_reset_complete.html -->
+{% extends "blog/base.html" %}
+{% block content %}
+    <div class="alert alert-info">
+        Your password has been set.
+    </div>
+    <a href="{% url 'login' %}">Sign In Here</a>
+{% endblock content %}
+```
+
+5. Add `users/templates/users/password_reset_confirm.html`
+```html
+<!-- users/templates/users/password_reset_confirm.html -->
+{% extends "blog/base.html" %}
+{% load crispy_forms_tags %}
+{% block content %}
+    <div class="content-section">
+        <form method="POST">
+            {% csrf_token %}
+            <fieldset class="form-group">
+                <legend class="border-bottom mb-4">Reset Password</legend>
+                {{ form|crispy }}
+            </fieldset>
+            <div class="form-group">
+                <button class="btn btn-outline-info" type="submit">Reset Password</button>
+            </div>
+        </form>
+    </div>
+{% endblock content %}
+```
+
+6. Add `users/templates/users/password_reset_done.html`
+```html
+<!-- users/templates/users/password_reset_done.html -->
+{% extends "blog/base.html" %}
+{% block content %}
+    <div class="alert alert-info">
+        An email has been sent with instructions to reset your password
+    </div>
+{% endblock content %}
+```
